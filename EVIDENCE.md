@@ -22,18 +22,27 @@ la boucle (`Agent.ask`) recommence jusqu'à la réponse finale.
 python -m analyst "Combien de trajets ont commencé à Hoboken ?"
 ```
 
-**Trace d'un vrai appel — À COMPLÉTER** (copier la sortie, ou le chemin du
-fichier `traces/trace_*.json`) :
+**Trace d'un vrai appel** (Qwen3.5-4B Q4_K_M via Ollama, sur mon Mac, 2026-11-02) :
 
 ```
+$ python -m analyst "Combien de trajets ont commencé à Hoboken ?"
 --- run_pandas
-<code écrit par Qwen>
->>> <résultat>
+result = df[df['start_city'] == 'Hoboken'].shape[0]
+>>> 55380
 --- arbitre : OK
-Réponse (answered) : ...
+
+Réponse (answered) : 55 380 trajets ont commencé à Hoboken.
+Tokens : {'prompt_tokens': 1357, 'completion_tokens': 60}  |  35.48 s
 ```
 
-Attendu : 55 380 trajets (`bench/expected.json`, t07).
+Fichier de trace complet : `ai_log/traces/trace_20261102_124635_306260.json`
+(copié depuis `traces/`).
+
+Lecture de la trace : le modèle n'a pas répondu de tête, il a appelé l'outil une
+fois ; l'outil a renvoyé `55380` ; l'arbitre a retrouvé « 55 380 » (écrit avec
+une espace) dans cette sortie et a laissé passer la réponse. Coût : 1 417 tokens.
+
+Réponse attendue : 55 380 trajets (`bench/expected.json`, t07) : **juste**.
 
 ---
 
