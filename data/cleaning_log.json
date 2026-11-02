@@ -1,0 +1,90 @@
+{
+  "rules": {
+    "min_60s": {
+      "rule": "Les trajets de moins de 60 secondes ne sont pas de vrais trajets (faux départs, re-dépôt du vélo) ; les trajets du personnel et des stations de test non plus.",
+      "source": "Citi Bike, page 'System Data' (https://citibikenyc.com/system-data)"
+    },
+    "max_24h": {
+      "rule": "Un vélo non rendu au bout de 24 heures est considéré comme perdu ou volé : un 'trajet' de plus de 24 h n'est pas un trajet.",
+      "source": "Citi Bike, contrat de location / FAQ tarifs (https://citibikenyc.com/pricing) - à vérifier et citer précisément"
+    },
+    "city_prefix": {
+      "rule": "Le préfixe de l'identifiant de station donne la ville : HB = Hoboken, JC = Jersey City ; un identifiant numérique (ex. 6432.11) est une station de New York.",
+      "source": "Carte des stations Citi Bike (stations HBxxx toutes à Hoboken) ; vérifié sur les coordonnées : les ids numériques sont à Manhattan (longitude > -74.02, ex. 'E 40 St & Park Ave')"
+    }
+  },
+  "steps": [
+    {
+      "step": "doublons ride_id",
+      "rows_before": 115558,
+      "rows_after": 115558,
+      "rows_removed": 0,
+      "values_changed": null,
+      "reason": "un trajet = une ligne",
+      "source": "décision de l'analyste"
+    },
+    {
+      "step": "dates illisibles",
+      "rows_before": 115558,
+      "rows_after": 115558,
+      "rows_removed": 0,
+      "values_changed": 231116,
+      "reason": "started_at/ended_at convertis en datetime ; lignes non convertibles retirées",
+      "source": "décision de l'analyste"
+    },
+    {
+      "step": "durée <= 0",
+      "rows_before": 115558,
+      "rows_after": 115558,
+      "rows_removed": 0,
+      "values_changed": null,
+      "reason": "fin avant le début : erreur d'horodatage",
+      "source": "décision de l'analyste"
+    },
+    {
+      "step": "durée < 60 s",
+      "rows_before": 115558,
+      "rows_after": 115558,
+      "rows_removed": 0,
+      "values_changed": null,
+      "reason": "Les trajets de moins de 60 secondes ne sont pas de vrais trajets (faux départs, re-dépôt du vélo) ; les trajets du personnel et des stations de test non plus.",
+      "source": "Citi Bike, page 'System Data' (https://citibikenyc.com/system-data)"
+    },
+    {
+      "step": "durée > 24 h",
+      "rows_before": 115558,
+      "rows_after": 115531,
+      "rows_removed": 27,
+      "values_changed": null,
+      "reason": "Un vélo non rendu au bout de 24 heures est considéré comme perdu ou volé : un 'trajet' de plus de 24 h n'est pas un trajet.",
+      "source": "Citi Bike, contrat de location / FAQ tarifs (https://citibikenyc.com/pricing) - à vérifier et citer précisément"
+    },
+    {
+      "step": "id station d'arrivée reconstitué",
+      "rows_before": 115531,
+      "rows_after": 115531,
+      "rows_removed": 0,
+      "values_changed": 30,
+      "reason": "id manquant mais nom présent : id retrouvé grâce au nom (même nom = même station)",
+      "source": "décision de l'analyste"
+    },
+    {
+      "step": "station d'arrivée manquante",
+      "rows_before": 115531,
+      "rows_after": 115308,
+      "rows_removed": 223,
+      "values_changed": null,
+      "reason": "vélo non rendu en station (coordonnées arrondies à 0,01°) : trajet incomplet",
+      "source": "décision de l'analyste"
+    },
+    {
+      "step": "ville déduite de l'id de station",
+      "rows_before": 115308,
+      "rows_after": 115308,
+      "rows_removed": 0,
+      "values_changed": 230616,
+      "reason": "Le préfixe de l'identifiant de station donne la ville : HB = Hoboken, JC = Jersey City ; un identifiant numérique (ex. 6432.11) est une station de New York. Id d'une autre forme : ligne retirée.",
+      "source": "Carte des stations Citi Bike (stations HBxxx toutes à Hoboken) ; vérifié sur les coordonnées : les ids numériques sont à Manhattan (longitude > -74.02, ex. 'E 40 St & Park Ave')"
+    }
+  ]
+}

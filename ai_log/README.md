@@ -1,0 +1,13 @@
+# Journal d'usage de l'IA (R3)
+
+Pour chaque séance : l'export de la conversation avec l'outil d'IA
+(`session_XX_export.*`) et une courte note (`session_XX.md`) qui dit, pour le
+code produit : **gardé tel quel**, **corrigé à la main (quoi ?)**, ou
+**pseudo-code / prompt réécrit (quelle ligne, pourquoi)**.
+
+Règle suivie : aucune clé d'API, aucun mot de passe, aucune donnée personnelle
+dans les prompts ni dans ce dossier.
+
+| séance | date | outil | note |
+|---|---|---|---|
+| 01 | 2026-11-02 | Claude Code (session cloud) | [session_01.md](session_01.md) |
