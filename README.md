@@ -20,7 +20,7 @@ Prérequis : Python 3.10+ et [Ollama](https://ollama.com).
 ```bash
 git clone https://github.com/Hii987/exam-coding-for-ai.git
 cd exam-coding-for-ai
-python -m venv .venv
+python3 -m venv .venv              # Windows : python -m venv .venv
 source .venv/bin/activate          # Windows : .venv\Scripts\activate
 pip install -r requirements.txt
 ```
