@@ -1,9 +1,8 @@
 # EVIDENCE — une section par brique
 
 Toutes les commandes se lancent depuis la racine du dépôt, après l'installation
-du README. Les sections marquées **À COMPLÉTER** demandent une exécution avec
-Qwen3.5-4B sur ma machine (le modèle n'a pas pu tourner dans l'environnement où
-le code a été écrit).
+du README. Toutes les preuves avec le modèle ont été obtenues avec Qwen3.5-4B
+(Q4_K_M, via Ollama) sur mon Mac, les 2 et 3 novembre 2026.
 
 ---
 
@@ -70,12 +69,30 @@ bloquées, aucun fichier écrit) et `tests/test_guard.py`, `tests/test_agent.py`
 python -m pytest -q tests/test_sandbox.py tests/test_guard.py tests/test_agent.py
 ```
 
-**En vrai — À COMPLÉTER** : une question qui pousse le modèle à inventer, par
-exemple :
+**En vrai, avec Qwen3.5-4B : l'arbitre bloque des chiffres inventés.** Benchmark
+version 1, tâche t12 (« Combien de trajets se terminent à New York ? », attendu
+321), lancement 2 ; trace complète dans `ai_log/traces/bench_v1_echecs_t01_t12.txt` :
 
-```bash
-python -m analyst "Combien de trajets y aura-t-il en octobre 2024 ?"
 ```
+[0] sortie : (rien : assignez votre réponse à la variable `result`)
+[1] Qwen répond : Il y a 26450 trajets se terminant à New York.
+[1] arbitre : REFUSE ['26450']
+[3] Qwen répond : Il y a 26450 trajets se terminant à New York.
+[3] arbitre : REFUSE ['26450']
+[5] Qwen répond : Il y a 26450 trajets se terminant à New York.
+[5] arbitre : REFUSE ['26450']
+RÉPONSE FINALE : Je ne peux pas donner de réponse chiffrée vérifiée : les chiffres
+proposés n'ont pas été calculés par le code.
+```
+
+Qwen n'avait aucun calcul (bug de l'outil, corrigé ensuite, voir brique 9) et a
+inventé 26450. Le prompt lui demandait de n'utiliser que des chiffres calculés :
+il a désobéi. Le code, lui, a refusé trois fois, et aucun chiffre faux n'a été
+donné. Sur l'ensemble du benchmark v1, l'arbitre a refusé 10 réponses, dont 5
+pour t01 et t12 avec des chiffres inventés (12 465,38 ; 10834 ; 26450 ; 13478 ; 0).
+
+Pour le voir en direct : `python -m app`, vue « Barrière & arbitre », ou
+`python -m analyst "Combien de trajets y aura-t-il en octobre 2024 ?"`.
 
 ---
 
@@ -290,4 +307,26 @@ Vérification de t08 après correction, sans écraser les résultats de la versi
 python bench/run_bench.py --runs 3 --tasks t08 --modes system --out bench/results/v3_t08
 ```
 
-**Résultat de cette vérification — À COMPLÉTER.**
+**Résultat de cette vérification : 0 sur 3, et je garde t08 comme limite.**
+
+```
+[system run1] t08 NON 'Le jour qui a compté le plus de trajets est le 2024-09-03.'
+[system run2] t08 NON 'Le jour qui a compté le plus de trajets est le 2024-09-03.'
+[system run3] t08 NON 'Le jour qui a compté le plus de trajets est le 2024-09-21.'
+```
+
+Les trois réponses ont été acceptées par l'arbitre, et ce sont les deux
+horodatages trouvés en version 2 quand Qwen regroupait par `started_at` exact
+(2024-09-03 18:23:11 et 2024-09-21 12:24:57, 2 trajets chacun). Le bug de
+l'outil est corrigé (plus de refus, plus d'erreur `__import__`), mais l'erreur
+de raisonnement reste : le modèle confond « jour » et « horodatage ».
+
+Je ne la corrige pas en ajoutant un indice au prompt. Elle montre concrètement
+la limite principale du système : **l'arbitre garantit qu'un chiffre vient d'un
+calcul, pas que c'est le bon calcul.** Pistes pour aller plus loin : décrire
+dans le schéma que `started_at` est précis à la milliseconde, ou demander au
+modèle un second calcul de contrôle (par exemple le nombre de trajets du jour
+trouvé, qui révélerait ici un « jour » de 2 trajets).
+
+Commande pour relire ces traces :
+`python bench/show_failures.py --dir bench/results/v3_t08`

@@ -106,7 +106,7 @@ python bench/run_bench.py --runs 3 --sleep 13
 ```
 
 `--sleep 13` respecte la limite de 5 requêtes par minute du compte gratuit.
-Si vous utilisez Cerebras, indiquez-le ici : **modèle utilisé : à compléter**.
+**Modèle utilisé pour toutes les preuves de ce dépôt : Qwen3.5-4B (Q4_K_M), en local via Ollama.** Cerebras n'a pas été utilisé.
 
 ## Organisation
 
