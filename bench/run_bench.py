@@ -74,7 +74,10 @@ def main() -> None:
     p.add_argument("--modes", default="system,model_alone")
     p.add_argument("--sleep", type=float, default=0.0, help="pause entre tâches (s)")
     p.add_argument("--tasks", default="", help="ids séparés par des virgules (défaut : toutes)")
+    p.add_argument("--out", default=str(RESULTS),
+                   help="dossier des résultats (pour ne pas écraser bench/results)")
     a = p.parse_args()
+    out_dir = Path(a.out)
 
     from analyst.llm import make_llm
     df = load_clean(config.CLEAN_CSV)
@@ -84,12 +87,12 @@ def main() -> None:
         print("ATTENTION : les réponses attendues diffèrent de bench/expected.json")
     llm = make_llm()
     tasks = [t for t in TASKS if not a.tasks or t["id"] in a.tasks.split(",")]
-    RESULTS.mkdir(exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
     rows = []
     for mode in a.modes.split(","):
         agent = Agent(llm, df, use_tools=(mode == "system"))
         for k in range(1, a.runs + 1):
-            path = RESULTS / f"{mode}_run{k}.jsonl"
+            path = out_dir / f"{mode}_run{k}.jsonl"
             with path.open("w", encoding="utf-8") as f:
                 for t in tasks:
                     try:
@@ -107,7 +110,7 @@ def main() -> None:
                     print(f"[{mode} run{k}] {t['id']} {'OK ' if ok else 'NON'} {res['answer'][:90]!r}")
                     time.sleep(a.sleep)
     summary = summarize(rows)
-    (RESULTS / "summary.md").write_text(summary, encoding="utf-8")
+    (out_dir / "summary.md").write_text(summary, encoding="utf-8")
     print("\n" + summary)
 
 

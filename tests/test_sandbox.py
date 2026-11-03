@@ -18,6 +18,7 @@ ATTACKS = [
     "result = np.lib.npyio.os",
     "result = stats.np.save('x.npy', 1)",
     "result = ().__class__.__bases__[0].__subclasses__()",
+    "result = __builtins__.get('_' + '_import__')('os')",
 ]
 
 
@@ -84,3 +85,22 @@ def test_explicit_result_wins_over_last_expression(clean_df):
 def test_last_expression_does_not_bypass_the_barrier(clean_df):
     res = sandbox.run_code("open('/etc/passwd').read()", clean_df)
     assert res["blocked"]
+
+
+
+# Régression du benchmark v2 (tâche t08), codes recopiés de la trace.
+def test_strftime_works_inside_the_sandbox(clean_df):
+    code = "df.groupby('started_at').size().sort_values(ascending=False).head(1).index[0].strftime('%Y-%m-%d')"
+    res = sandbox.run_code(code, clean_df)
+    assert res["ok"] and res["output"] == "'2024-09-01'"
+
+
+def test_dates_are_shown_as_iso_text(clean_df):
+    res = sandbox.run_code("df.groupby(df['started_at'].dt.date).size().idxmax()", clean_df)
+    assert res["output"] == "2024-09-02"
+
+
+def test_internal_import_is_whitelisted():
+    with pytest.raises(ImportError):
+        sandbox._internal_import("os")
+    assert sandbox._internal_import("time").__name__ == "time"

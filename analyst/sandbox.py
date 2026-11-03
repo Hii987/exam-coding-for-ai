@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import ast
 import builtins
+import datetime
 import io
 import re
 import threading
@@ -37,6 +38,24 @@ SAFE_BUILTINS = {name: getattr(builtins, name) for name in [
 ]}
 
 
+# Certaines fonctions de bibliothèque importent un module en interne : par exemple
+# Timestamp.strftime importe `time`. Sans `__import__` dans les builtins, elles
+# plantaient (KeyError: '__import__', vu dans la trace de t08, benchmark v2).
+# Le code du modèle ne peut pas appeler cette fonction : la barrière bloque le nom
+# `__import__`, les chaînes « __… », getattr et les instructions import.
+INTERNAL_IMPORTS = {"time", "datetime", "_datetime", "_strptime", "calendar", "locale",
+                    "math", "re", "pandas", "numpy", "dateutil", "pytz", "zoneinfo"}
+
+
+def _internal_import(name, globals=None, locals=None, fromlist=(), level=0):
+    if level == 0 and name.split(".")[0] in INTERNAL_IMPORTS:
+        return builtins.__import__(name, globals, locals, fromlist, level)
+    raise ImportError(f"import interne refusé : {name}")
+
+
+SAFE_BUILTINS["__import__"] = _internal_import
+
+
 class Blocked(Exception):
     """Le code a été refusé par la barrière, il n'a pas été exécuté."""
 
@@ -52,7 +71,7 @@ def check_code(code: str) -> None:
             raise Blocked("import interdit (pd, np et stats sont déjà disponibles)")
         if isinstance(node, (ast.Global, ast.Nonlocal)):
             raise Blocked("global/nonlocal interdit")
-        if isinstance(node, ast.Name) and node.id in FORBIDDEN_NAMES:
+        if isinstance(node, ast.Name) and (node.id in FORBIDDEN_NAMES or node.id.startswith("_")):
             raise Blocked(f"nom interdit : {node.id}")
         if isinstance(node, ast.Attribute) and FORBIDDEN_ATTR.match(node.attr):
             raise Blocked(f"attribut interdit : .{node.attr}")
@@ -64,6 +83,10 @@ def check_code(code: str) -> None:
 def _short(value, max_rows: int = 30) -> str:
     if isinstance(value, np.generic):  # np.float64(48.03) -> 48.03, plus lisible
         value = value.item()
+    if isinstance(value, (datetime.date, pd.Timestamp)):
+        # datetime.date(2024, 9, 13) -> 2024-09-13 : l'arbitre cherche les dates
+        # écrites ainsi (fausse alerte vue dans la trace de t08, benchmark v2)
+        return str(value)
     if isinstance(value, (pd.DataFrame, pd.Series)):
         with pd.option_context("display.max_rows", max_rows, "display.width", 200):
             return str(value.head(max_rows))

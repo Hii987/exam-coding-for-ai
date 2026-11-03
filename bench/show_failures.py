@@ -40,13 +40,15 @@ def main() -> None:
     p.add_argument("--mode", default="system")
     p.add_argument("--tasks", default="", help="ids séparés par des virgules")
     p.add_argument("--all", action="store_true", help="afficher aussi les réussites")
+    p.add_argument("--dir", default=str(RESULTS), help="dossier des résultats")
     a = p.parse_args()
+    results = Path(a.dir)
     wanted = set(a.tasks.split(",")) if a.tasks else None
     rows = []
-    for path in sorted(RESULTS.glob(f"{a.mode}_run*.jsonl")):
+    for path in sorted(results.glob(f"{a.mode}_run*.jsonl")):
         rows += [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
     if not rows:
-        raise SystemExit(f"Aucun fichier {a.mode}_run*.jsonl dans {RESULTS} : lancez d'abord run_bench.py")
+        raise SystemExit(f"Aucun fichier {a.mode}_run*.jsonl dans {results} : lancez d'abord run_bench.py")
     shown = [r for r in rows if (a.all or not r["correct"]) and (wanted is None or r["task"] in wanted)]
     for r in sorted(shown, key=lambda r: (r["task"], r["run"])):
         print(describe(r) + "\n")

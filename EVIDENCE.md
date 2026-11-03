@@ -254,5 +254,40 @@ Limite : 3 lancements de 12 tâches, c'est peu. Un écart-type de 0 veut dire qu
 les 3 lancements ont donné le même score, pas que le système est parfaitement
 stable ; avec plus de tâches ou de lancements, on verrait sans doute de la variation.
 
-**Échec restant en version 2 : t08 (jour le plus chargé) — À COMPLÉTER** à partir
-de `python bench/show_failures.py --tasks t08`.
+**Échec restant en version 2 : t08, « Quel jour a compté le plus de trajets ? »**
+(attendu 2024-09-13 ; raté 3 fois sur 3). Commande :
+`python bench/show_failures.py --tasks t08` ; sortie complète dans
+`ai_log/traces/bench_v2_echec_t08.txt`. Trois lancements, trois causes :
+
+| lancement | ce que montre la trace | cause |
+|---|---|---|
+| 2 | Qwen calcule **juste** : `df.groupby(df['started_at'].dt.date).size().idxmax()` → sortie `datetime.date(2024, 9, 13)`. Il répond « 2024-09-13 » ; l'arbitre refuse 3 fois. | **Fausse alerte de l'arbitre**, due à mon outil : la date est affichée avec `repr`, et l'arbitre cherche la date écrite telle quelle, `2024-09-13`. |
+| 1 | `.strftime('%Y-%m-%d')` échoue deux fois : `KeyError: '__import__'`. Qwen abandonne et groupe par **horodatage exact** au lieu du jour : 2024-09-21 12:24:57 (2 trajets). L'arbitre accepte 2024-09-21. | D'abord **ma barrière** : `strftime` importe le module `time` en interne, et mes builtins réduits n'avaient pas `__import__`. Puis une **erreur de raisonnement** du modèle. |
+| 3 | Qwen groupe directement par horodatage exact : 2024-09-03 18:23:11 (2 trajets). L'arbitre accepte 2024-09-03. | **Erreur de raisonnement** du modèle (jour ≠ horodatage). |
+
+**Ce que montre cet échec.** Les lancements 1 et 3 illustrent la limite
+principale du système : **l'arbitre vérifie qu'un chiffre vient d'un calcul, pas
+que le calcul est le bon.** 2024-09-21 sort bien d'un calcul, mais du mauvais
+(un « jour » qui ne compte que 2 trajets). Le lancement 2 montre l'inverse : une
+réponse juste refusée à cause d'un détail d'affichage.
+
+**Corrections (après le benchmark v2)** dans `analyst/sandbox.py`, avec les
+codes de la trace rejoués en tests de régression :
+
+- les dates sont renvoyées en texte ISO (`2024-09-13`), plus avec `repr` ;
+- un `__import__` **interne et sur liste blanche** (`time`, `datetime`, `pandas`…)
+  pour que `strftime` fonctionne. Le code du modèle ne peut pas l'appeler : la
+  barrière bloque le nom `__import__`, les chaînes « __… », et désormais **tout nom
+  commençant par « _ »**. Une nouvelle attaque le vérifie :
+  `__builtins__.get('_' + '_import__')('os')` est bloquée.
+
+L'erreur de raisonnement du modèle (lancements 1 et 3) n'est **pas** corrigée :
+c'est une vraie limite, gardée comme telle.
+
+Vérification de t08 après correction, sans écraser les résultats de la version 2 :
+
+```bash
+python bench/run_bench.py --runs 3 --tasks t08 --modes system --out bench/results/v3_t08
+```
+
+**Résultat de cette vérification — À COMPLÉTER.**
