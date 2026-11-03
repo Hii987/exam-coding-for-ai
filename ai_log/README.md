@@ -11,3 +11,4 @@ dans les prompts ni dans ce dossier.
 | séance | date | outil | note |
 |---|---|---|---|
 | 01 | 2026-11-02 | Claude Code (session cloud) | [session_01.md](session_01.md) |
+| 02 | 2026-11-03 | Claude Code (session cloud) | [session_02.md](session_02.md) |

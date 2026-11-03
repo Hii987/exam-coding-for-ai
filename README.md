@@ -61,6 +61,26 @@ Affiche le code écrit par le modèle, le résultat de chaque appel, le verdict 
 l'arbitre, la réponse, les tokens consommés, et sauve la trace dans `traces/`.
 Options : `--no-tools` (le modèle seul), `--no-guard` (sans arbitre).
 
+## 4 bis. L'interface web (pour la démonstration)
+
+```bash
+python -m app
+```
+
+Ouvre http://127.0.0.1:8000 dans le navigateur. Elle n'utilise que la bibliothèque standard
+de Python et ne charge rien depuis internet : elle marche hors ligne. Cinq vues :
+
+| vue | ce qu'elle montre |
+|---|---|
+| **Analyste** | la boucle de l'agent **en direct** : Qwen écrit du code, l'outil calcule, l'arbitre vérifie ; dans la réponse, chaque chiffre est surligné vert (vérifié, avec sa source au survol) ou rouge |
+| **Duel** | la même question au modèle seul et au système, côte à côte, avec la bonne réponse à la fin |
+| **Barrière & arbitre** | les deux règles de la brique 3, sans le modèle : attaques bloquées, chiffres inventés refusés |
+| **Benchmark** | exactitude moyenne ± écart-type, grille tâche × lancement, trace de chaque case (après `bench/run_bench.py`) |
+| **Données** | le journal de nettoyage et les intervalles de confiance (briques 6 et 8) |
+
+Options : `--port 8001`, `--no-browser`. En mode Duel, Ollama traite souvent les deux
+requêtes l'une après l'autre : c'est normal que la deuxième colonne attende.
+
 ## 5. L'incertitude et le benchmark
 
 ```bash
@@ -100,6 +120,7 @@ Si vous utilisez Cerebras, indiquez-le ici : **modèle utilisé : à compléter*
 | `analyst/stats.py` | intervalles de confiance écrits à la main (brique 8) |
 | `scripts/uncertainty.py` | rapport d'incertitude (brique 8) |
 | `bench/` | tâches, réponses attendues, comparaison mesurée (brique 9) |
+| `app/` | interface web locale : serveur `server.py` (bibliothèque standard), page `static/` |
 | `tests/` | tests pytest à réponse connue (R2) |
 | `ai_log/` | journal d'usage de l'IA (R3) |
 

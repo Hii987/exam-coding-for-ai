@@ -57,3 +57,8 @@ def test_timeout(clean_df):
 
 def test_missing_result_hint(clean_df):
     assert "result" in sandbox.run_code("x = 1", clean_df)["output"]
+
+
+def test_numpy_scalar_shown_as_plain_number(clean_df):
+    res = sandbox.run_code("result = df['duration_min'].mean()", clean_df)
+    assert res["output"] == "18.75"

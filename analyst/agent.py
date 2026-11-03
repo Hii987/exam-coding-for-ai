@@ -72,7 +72,9 @@ class Agent:
         self.llm, self.df = llm, df
         self.use_tools, self.use_guard = use_tools, use_guard and use_tools
 
-    def ask(self, question: str) -> dict:
+    def ask(self, question: str, on_event=None) -> dict:
+        """Pose la question. `on_event(ev)` (facultatif) reçoit chaque étape en direct :
+        c'est ce qui permet à l'interface web d'afficher la boucle pendant qu'elle tourne."""
         t0 = time.time()
         prompt = SYSTEM_PROMPT if self.use_tools else BASELINE_PROMPT
         messages = [{"role": "system", "content": prompt.format(schema=schema_text(self.df))},
@@ -83,13 +85,20 @@ class Agent:
         retries = 0
         answer, status = "", "max_steps"
 
+        def log(ev: dict) -> None:
+            trace.append(ev)
+            if on_event:
+                on_event(ev)
+
         for step in range(MAX_STEPS):
+            if on_event:
+                on_event({"step": step, "type": "thinking"})
             reply = self.llm.chat(messages, TOOLS if self.use_tools else None)
             for k in usage:
                 usage[k] += reply.get("usage", {}).get(k, 0) or 0
             content = strip_think(reply["content"])
             calls = reply["tool_calls"] if self.use_tools else []
-            trace.append({"step": step, "type": "llm", "content": content,
+            log({"step": step, "type": "llm", "content": content,
                           "tool_calls": calls})
 
             if calls:
@@ -106,7 +115,7 @@ class Agent:
                         text = f"ERREUR : {res['error']}"
                     else:
                         tool_outputs.append(text)
-                    trace.append({"step": step, "type": "tool", "name": c["name"],
+                    log({"step": step, "type": "tool", "name": c["name"],
                                   "arguments": c["arguments"], "result": text,
                                   "blocked": res.get("blocked", False)})
                     messages.append({"role": "tool", "content": text, "name": c["name"],
@@ -118,7 +127,7 @@ class Agent:
                 answer, status = content, "answered"
                 break
             verdict = guard.check_answer(content, tool_outputs, question)
-            trace.append({"step": step, "type": "guard", "answer": content, **verdict})
+            log({"step": step, "type": "guard", "answer": content, **verdict})
             if verdict["ok"]:
                 answer, status = content, "answered"
                 break

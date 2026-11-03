@@ -62,6 +62,8 @@ def check_code(code: str) -> None:
 
 
 def _short(value, max_rows: int = 30) -> str:
+    if isinstance(value, np.generic):  # np.float64(48.03) -> 48.03, plus lisible
+        value = value.item()
     if isinstance(value, (pd.DataFrame, pd.Series)):
         with pd.option_context("display.max_rows", max_rows, "display.width", 200):
             return str(value.head(max_rows))

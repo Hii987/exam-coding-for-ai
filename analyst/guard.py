@@ -31,18 +31,24 @@ def _to_float(tok: str) -> tuple[float, int]:
     return float(t), dec
 
 
-def extract_numbers(text: str) -> list[tuple[str, float, int]]:
-    """Liste de (texte, valeur, décimales). Les dates sont retirées avant."""
-    text = DATE_RE.sub(" ", text)
+def find_numbers(text: str) -> list[tuple[int, int, str, float, int]]:
+    """Liste de (début, fin, texte, valeur, décimales). Les dates sont masquées
+    par des espaces de même longueur, pour garder les positions exactes."""
+    masked = DATE_RE.sub(lambda m: " " * len(m.group(0)), text)
     found = []
-    for m in NUM_RE.finditer(text):
-        tok = m.group(0).strip()
+    for m in NUM_RE.finditer(masked):
+        tok = m.group(0)
         try:
             v, d = _to_float(tok)
         except ValueError:
             continue
-        found.append((tok, v, d))
+        found.append((m.start(), m.end(), tok, v, d))
     return found
+
+
+def extract_numbers(text: str) -> list[tuple[str, float, int]]:
+    """Liste de (texte, valeur, décimales). Les dates sont retirées avant."""
+    return [(tok, v, d) for _, _, tok, v, d in find_numbers(text)]
 
 
 def extract_dates(text: str) -> list[str]:
@@ -83,3 +89,26 @@ def check_answer(answer: str, tool_outputs: list[str], question: str = "") -> di
         if date not in evidence_text:
             unsupported.append(date)
     return {"ok": not unsupported, "unsupported": unsupported}
+
+
+def annotate(answer: str, tool_outputs: list[str], question: str = "") -> list[dict]:
+    """Pour l'interface : chaque chiffre et chaque date de la réponse, avec sa
+    position, son verdict, et l'appel d'outil qui le justifie (source = numéro
+    de la sortie, "question", ou None si rien ne le justifie)."""
+    per_output = [evidence_values([o]) for o in tool_outputs]
+    from_question = evidence_values([question])
+    spans = []
+    for start, end, tok, v, d in find_numbers(answer):
+        source = next((i for i, ev in enumerate(per_output) if matches(v, d, ev)), None)
+        if source is None and matches(v, d, from_question):
+            source = "question"
+        spans.append({"start": start, "end": end, "text": tok, "kind": "number",
+                      "ok": source is not None, "source": source})
+    for m in DATE_RE.finditer(answer):
+        date = m.group(0)[:10]
+        source = next((i for i, o in enumerate(tool_outputs) if date in o), None)
+        if source is None and date in question:
+            source = "question"
+        spans.append({"start": m.start(), "end": m.start() + 10, "text": date, "kind": "date",
+                      "ok": source is not None, "source": source})
+    return sorted(spans, key=lambda s: s["start"])
