@@ -227,5 +227,32 @@ dans ces traces sont rejoués dans `tests/test_sandbox.py`
 (`test_last_expression_is_returned_like_a_notebook`), et un test vérifie que la
 barrière s'applique toujours.
 
-**Résultats, version 2 (après correction) — À COMPLÉTER** : relancer
-`python bench/run_bench.py --runs 3` et coller `bench/results/summary.md`.
+**Résultats, version 2 (après correction)** (mêmes conditions : Qwen3.5-4B,
+température 0,7, 12 tâches, 3 lancements ; détail dans `bench/results/summary.md`) :
+
+| mode | exactitude moyenne | écart-type | par lancement | refus de l'arbitre | tokens / tâche |
+|---|---|---|---|---|---|
+| système (outil + arbitre) | **91,7 %** | 0,0 pt | 92 %, 92 %, 92 % | 1 | 1 691 |
+| modèle seul | 8,3 % | 0,0 pt | 8 %, 8 %, 8 % | 0 | 364 |
+
+**Avant / après la correction (mode système).**
+
+| | version 1 | version 2 |
+|---|---|---|
+| exactitude moyenne | 52,8 % | **91,7 %** |
+| écart-type entre lancements | 19,2 pts | **0,0 pt** |
+| refus de l'arbitre | 10 | **1** |
+| tokens par tâche | 4 422 | **1 691** |
+| t01 / t12 | 1/3 et 0/3 | **3/3 et 3/3** |
+
+La correction d'une seule convention de l'outil fait gagner 39 points, rend le
+système stable d'un lancement à l'autre, et divise par 2,6 le nombre de tokens
+(Qwen ne réécrit plus trois fois le même code). Le modèle seul reste à 8,3 % :
+il ne réussit que t01, grâce au nombre de lignes donné dans le prompt.
+
+Limite : 3 lancements de 12 tâches, c'est peu. Un écart-type de 0 veut dire que
+les 3 lancements ont donné le même score, pas que le système est parfaitement
+stable ; avec plus de tâches ou de lancements, on verrait sans doute de la variation.
+
+**Échec restant en version 2 : t08 (jour le plus chargé) — À COMPLÉTER** à partir
+de `python bench/show_failures.py --tasks t08`.
