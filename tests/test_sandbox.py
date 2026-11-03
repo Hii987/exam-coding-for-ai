@@ -62,3 +62,25 @@ def test_missing_result_hint(clean_df):
 def test_numpy_scalar_shown_as_plain_number(clean_df):
     res = sandbox.run_code("result = df['duration_min'].mean()", clean_df)
     assert res["output"] == "18.75"
+
+
+# Régression du benchmark v1 : les codes écrits par Qwen, recopiés des traces.
+@pytest.mark.parametrize("code,expected", [
+    ("len(df)", "4"),
+    ("df[df['end_city'] == 'New York'].shape[0]", "1"),
+    ("len(df[df['end_city'] == 'New York'])", "1"),
+    ("(df[df['end_city'] == 'New York']['ride_id'].count())", "1"),
+])
+def test_last_expression_is_returned_like_a_notebook(code, expected, clean_df):
+    res = sandbox.run_code(code, clean_df)
+    assert res["ok"] and res["output"] == expected
+
+
+def test_explicit_result_wins_over_last_expression(clean_df):
+    res = sandbox.run_code("result = 7\nlen(df)", clean_df)
+    assert res["output"] == "7"
+
+
+def test_last_expression_does_not_bypass_the_barrier(clean_df):
+    res = sandbox.run_code("open('/etc/passwd').read()", clean_df)
+    assert res["blocked"]

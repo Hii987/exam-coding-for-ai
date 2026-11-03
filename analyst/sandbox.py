@@ -70,8 +70,25 @@ def _short(value, max_rows: int = 30) -> str:
     return repr(value)
 
 
+def last_expression_as_result(code: str):
+    """Comme dans un notebook : si le code n'affecte jamais `result` et que sa
+    dernière ligne est une expression (`len(df)`), on la transforme en
+    `result = len(df)`. Ajouté après le benchmark v1 : Qwen écrivait `len(df)`,
+    l'outil ne renvoyait rien, et Qwen inventait un chiffre (voir EVIDENCE.md)."""
+    tree = ast.parse(code)
+    assigns_result = any(isinstance(n, ast.Name) and n.id == "result" and isinstance(n.ctx, ast.Store)
+                         for n in ast.walk(tree))
+    if tree.body and isinstance(tree.body[-1], ast.Expr) and not assigns_result:
+        last = tree.body[-1]
+        tree.body[-1] = ast.Assign(targets=[ast.Name(id="result", ctx=ast.Store())], value=last.value)
+        ast.copy_location(tree.body[-1], last)
+        ast.fix_missing_locations(tree)
+    return tree
+
+
 def run_code(code: str, df: pd.DataFrame, timeout_s: float = 20.0) -> dict:
-    """Exécute `code` avec df, pd, np, stats. La valeur de `result` est renvoyée.
+    """Exécute `code` avec df, pd, np, stats. La valeur de `result` est renvoyée,
+    ou à défaut celle de la dernière ligne si c'est une expression.
 
     Renvoie {"ok": bool, "output": str, "stdout": str, "error": str|None}.
     """
@@ -89,7 +106,7 @@ def run_code(code: str, df: pd.DataFrame, timeout_s: float = 20.0) -> dict:
     def target():
         try:
             with redirect_stdout(out):
-                exec(compile(code, "<run_pandas>", "exec"), env)  # noqa: S102
+                exec(compile(last_expression_as_result(code), "<run_pandas>", "exec"), env)  # noqa: S102
             box["result"] = env.get("result")
         except Exception as e:  # erreur du code du modèle : on la lui renvoie
             box["error"] = f"{type(e).__name__}: {e}"
@@ -106,6 +123,6 @@ def run_code(code: str, df: pd.DataFrame, timeout_s: float = 20.0) -> dict:
     res = box.get("result")
     output = _short(res) if res is not None else ""
     if not output and not out.getvalue():
-        output = "(rien : assignez votre réponse à la variable `result`)"
+        output = "(rien : terminez par une expression, ou assignez la variable `result`)"
     return {"ok": True, "blocked": False, "output": output[:4000],
             "stdout": out.getvalue()[-2000:], "error": None}

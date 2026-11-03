@@ -31,8 +31,8 @@ TOOLS = [{
         "description": (
             "Exécute du code Python sur le DataFrame `df` (trajets Citi Bike nettoyés). "
             "`pd`, `np` et `stats` (mean_ci, bootstrap_ci, diff_means_ci, prop_ci, "
-            "diff_props_ci) sont disponibles. Aucun import. Mettez la réponse dans la "
-            "variable `result`."),
+            "diff_props_ci) sont disponibles. Aucun import. La valeur de la dernière "
+            "ligne est renvoyée (ou celle de la variable `result`)."),
         "parameters": {
             "type": "object",
             "properties": {"code": {"type": "string", "description": "code Python"}},

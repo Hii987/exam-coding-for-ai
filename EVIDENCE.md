@@ -163,8 +163,8 @@ date). Un refus de l'arbitre compte comme faux.
 python bench/run_bench.py --runs 3
 ```
 
-**Résultats** (Qwen3.5-4B Q4_K_M via Ollama, sur mon Mac, 3 novembre 2026 ;
-détail par tâche dans `bench/results/summary.md`) :
+**Résultats, version 1** (Qwen3.5-4B Q4_K_M via Ollama, sur mon Mac, 3 novembre 2026 ;
+détail par tâche dans `bench/results/summary_v1.md`) :
 
 | mode | lancements | exactitude moyenne | écart-type | par lancement | refus de l'arbitre | tokens / tâche |
 |---|---|---|---|---|---|---|
@@ -182,9 +182,50 @@ données qu'il reçoit commence par « DataFrame `df` : 115308 trajets ». Il re
 le prompt. La tâche t01 avantage donc le modèle seul, et sans elle, il ne
 réussit que 1 réponse sur 33.
 
-**Un échec expliqué à partir de sa trace — À COMPLÉTER.** Choisir une tâche
-ratée en mode système dans `bench/results/system_run*.jsonl`, et expliquer à
-partir de la trace : quel code le modèle a écrit, ce que l'outil a renvoyé, ce
-que l'arbitre a dit, et pourquoi la réponse est fausse. Cas à surveiller :
-t09 (signe de la différence), t02/t10 (proportion 0–1 ou %), t08 (date au
-mauvais format), t05 (nom de station tronqué).
+**Un échec expliqué à partir de sa trace : t12 et t01.** Commande :
+`python bench/show_failures.py --tasks t01,t12` ; sortie complète gardée dans
+`ai_log/traces/bench_v1_echecs_t01_t12.txt`.
+
+Extrait (t12, « Combien de trajets se terminent à New York ? », attendu 321,
+lancement 2) :
+
+```
+[0] Qwen écrit du code :  (df[df['end_city'] == 'New York']['ride_id'].count())
+[0] sortie : (rien : assignez votre réponse à la variable `result`)
+[1] Qwen répond : Il y a 26450 trajets se terminant à New York.
+[1] arbitre : REFUSE ['26450']
+... deux fois encore ...
+RÉPONSE FINALE : Je ne peux pas donner de réponse chiffrée vérifiée ...
+```
+
+Lecture de la trace, étape par étape :
+
+1. **Le code de Qwen est juste.** Le filtre `end_city == 'New York'` puis le
+   comptage donnent bien 321. Le modèle a compris la question et la colonne.
+2. **Mon outil ne renvoie rien.** Qwen écrit le calcul comme dans un notebook,
+   sans `result = …`. Or `run_pandas` ne renvoyait que la variable `result` :
+   la sortie est « (rien : assignez votre réponse à la variable `result`) ».
+3. **Qwen n'a aucun chiffre, et il en invente un** : 26450 (et dans les autres
+   lancements 12 465,38, 10834, 13478, 0). Il ne comprend pas l'indication et
+   réécrit le même code trois fois.
+4. **L'arbitre refuse chaque chiffre inventé**, trois fois, puis le système
+   répond qu'il ne peut pas donner de chiffre vérifié. La réponse est comptée
+   fausse, mais **aucun chiffre faux n'a été donné** à l'utilisateur.
+
+**Diagnostic.** La faute n'est ni au modèle ni à l'arbitre, mais à la
+convention de mon outil (`result = …`), peu naturelle pour un modèle habitué
+aux notebooks. Les 5 échecs de t01 et t12 ont la même cause. Le cas t01 montre
+aussi une **fausse alerte** de l'arbitre : au lancement 3, Qwen recopie le bon
+nombre (115308) depuis la description des données, et l'arbitre le refuse,
+car le prompt ne compte pas comme une preuve. C'est voulu : un chiffre doit
+venir d'un calcul de la session.
+
+**Correction.** `sandbox.last_expression_as_result` : comme dans un notebook, si
+le code n'affecte jamais `result` et finit par une expression, sa valeur est
+renvoyée. La description de l'outil le dit au modèle. Les codes écrits par Qwen
+dans ces traces sont rejoués dans `tests/test_sandbox.py`
+(`test_last_expression_is_returned_like_a_notebook`), et un test vérifie que la
+barrière s'applique toujours.
+
+**Résultats, version 2 (après correction) — À COMPLÉTER** : relancer
+`python bench/run_bench.py --runs 3` et coller `bench/results/summary.md`.
