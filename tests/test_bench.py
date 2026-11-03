@@ -38,3 +38,13 @@ def test_summary_mean_and_std():
              "correct": (r == 1), "tokens": 100} for r in (1, 2) for t in TASKS]
     s = summarize(rows)
     assert "| system | 2 | 50.0% | 70.7% |" in s
+
+
+def test_describe_failure_is_readable():
+    from bench.show_failures import describe
+    row = {"task": "t01", "mode": "system", "run": 2, "status": "refused", "expected": 115308.0,
+           "answer": "Je ne peux pas…", "trace": [
+               {"step": 0, "type": "llm", "content": "Il y a 115 308 trajets.", "tool_calls": []},
+               {"step": 0, "type": "guard", "ok": False, "unsupported": ["115 308"]}]}
+    text = describe(row)
+    assert "t01" in text and "REFUSE ['115 308']" in text and "Qwen répond : Il y a 115 308" in text

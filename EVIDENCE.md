@@ -163,12 +163,24 @@ date). Un refus de l'arbitre compte comme faux.
 python bench/run_bench.py --runs 3
 ```
 
-**Résultats — À COMPLÉTER** (coller `bench/results/summary.md`) :
+**Résultats** (Qwen3.5-4B Q4_K_M via Ollama, sur mon Mac, 3 novembre 2026 ;
+détail par tâche dans `bench/results/summary.md`) :
 
-| mode | lancements | exactitude moyenne | écart-type |
-|---|---|---|---|
-| system | 3 | | |
-| model_alone | 3 | | |
+| mode | lancements | exactitude moyenne | écart-type | par lancement | refus de l'arbitre | tokens / tâche |
+|---|---|---|---|---|---|---|
+| système (outil + arbitre) | 3 | **52,8 %** | 19,2 pts | 75 %, 42 %, 42 % | 10 | 4 422 |
+| modèle seul | 3 | 11,1 % | 4,8 pts | 8 %, 8 %, 17 % | 0 | 366 |
+
+**Lecture.** Le système fait presque 5 fois mieux que le modèle seul (+41,7 points),
+pour environ 12 fois plus de tokens. Il est aussi beaucoup plus variable
+(écart-type de 19,2 points : un lancement à 75 %, deux à 42 %), et 10 de ses
+réponses ont été refusées par l'arbitre, ce qui compte comme faux.
+
+**Une anomalie à expliquer : t01.** Le modèle seul réussit « Combien de trajets
+y a-t-il ? » 3 fois sur 3. Ce n'est pas qu'il devine bien : la description des
+données qu'il reçoit commence par « DataFrame `df` : 115308 trajets ». Il recopie
+le prompt. La tâche t01 avantage donc le modèle seul, et sans elle, il ne
+réussit que 1 réponse sur 33.
 
 **Un échec expliqué à partir de sa trace — À COMPLÉTER.** Choisir une tâche
 ratée en mode système dans `bench/results/system_run*.jsonl`, et expliquer à
