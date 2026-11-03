@@ -48,3 +48,10 @@ def test_describe_failure_is_readable():
                {"step": 0, "type": "guard", "ok": False, "unsupported": ["115 308"]}]}
     text = describe(row)
     assert "t01" in text and "REFUSE ['115 308']" in text and "Qwen répond : Il y a 115 308" in text
+
+
+def test_summary_with_a_subset_of_tasks():
+    rows = [{"mode": "system", "run": k, "task": "t08", "expected": "2024-09-13", "status": "answered",
+             "correct": False, "tokens": 100} for k in (1, 2, 3)]
+    s = summarize(rows)
+    assert "| t08 | 2024-09-13 | 0/3 |" in s and "| t01 |" not in s

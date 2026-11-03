@@ -59,6 +59,8 @@ def summarize(rows: list[dict]) -> str:
               "| tâche | attendu | " + " | ".join(modes) + " |",
               "|---|---|" + "---|" * len(modes)]
     for t in TASKS:
+        if not any(r["task"] == t["id"] for r in rows):
+            continue  # tâche non lancée (option --tasks)
         cells = []
         for m in modes:
             rs = [r for r in rows if r["mode"] == m and r["task"] == t["id"]]
